@@ -48,7 +48,21 @@ function stageCover(state) {
   addWanted(state, 4, 'Kabur dari PTS!');
   state.message = 'Kabur dari PTS — capai titik aman di timur, dengan bintang 0.';
   state.messageTimer = 30;
-  runSteps(state, 110, ['w'], { x: 1050, y: 300 });
+  // Let the pursuit spawn, then clear the roadblock out of this frame
+  // and ring the patrol cars in close so the chase reads at once.
+  runSteps(state, 10, ['w'], { x: 1050, y: 300 });
+  state.roadblock = null;
+  state.obstacles = state.obstacles.filter((o) => o.tag !== 'roadblock');
+  state.suppressRoadblock = true;
+  state.message = 'Kabur dari PTS — capai titik aman di timur, dengan bintang 0.';
+  state.messageTimer = 30;
+  state.police.forEach((car, i) => {
+    const a = (i / Math.max(1, state.police.length)) * Math.PI * 2;
+    car.x = state.player.x + Math.cos(a) * 380;
+    car.y = state.player.y + Math.sin(a) * 380;
+    car.speed = 300;
+  });
+  runSteps(state, 70, ['w'], { x: 1050, y: 300 });
   return state;
 }
 
@@ -56,13 +70,15 @@ function stageOnFoot(state) {
   // Mission 4 (warehouse shootout): Raka on foot at the Pelabuhan
   // crossroads with the guards in the open, Bang Dodi walking with him.
   startMission(state, 3);
-  state.player.x = 900; state.player.y = 1440;
+  state.player.x = 900; state.player.y = 1640;
   state.player.onFoot = true;
   state.player.weaponIndex = 0;
   state.message = 'Kalahkan penjaga gudang, lalu ambil dokumen muatannya.';
   state.messageTimer = 30;
-  // Aim up at the guards and fire in bursts; Raka stands his ground.
-  runSteps(state, 90, [], { x: 640, y: 290, down: true });
+  // Aim up at the guards and fire a short burst; keep the guards alive
+  // and visible in the frame, then hide the banner so they are not covered.
+  runSteps(state, 40, [], { x: 640, y: 240, down: true });
+  state.messageTimer = 0;
   return state;
 }
 

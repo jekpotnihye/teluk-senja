@@ -39,8 +39,8 @@ export const MISSIONS = [
     giver: 'Bang Dodi',
     brief: 'Anak buah Tuan Kala menyimpan muatan selundupan di gudang Pelabuhan Senja. Masuk ke gudang, kalahkan penjaganya, dan ambil dokumen muatannya. Bawa dokumen itu kembali ke Sinta.',
     steps: [
-      { type: 'defeat', x: 900, y: 1300, label: 'Kalahkan 3 penjaga gudang di perempatan Pelabuhan Senja', count: 3, guards: [[850, 1250], [950, 1250], [900, 1360]] },
-      { type: 'collect', x: 900, y: 1300, label: 'Ambil dokumen muatan di gudang' },
+      { type: 'defeat', x: 900, y: 1500, label: 'Kalahkan 3 penjaga gudang di perempatan Pelabuhan Senja', count: 3, guards: [[840, 1440], [960, 1440], [900, 1540]] },
+      { type: 'collect', x: 900, y: 1500, label: 'Ambil dokumen muatan di gudang' },
       { type: 'talk', x: 3050, y: 2650, label: 'Serahkan dokumen ke Sinta', npc: 'Sinta' },
     ],
     reward: 260, respect: 20,

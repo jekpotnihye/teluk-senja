@@ -50,8 +50,9 @@ export function updatePolice(state, dt) {
   }
   while (police.length > wantCount) police.pop();
 
-  // Chase: steer at the player, nudge out of buildings, bump the player.
-  // Patrol cars also repel each other so they fan out instead of piling up.
+  // Chase: steer at surround points around the player (PIT-style
+  // pressure from several sides) instead of piling onto one point.
+  // Patrol cars also repel each other so they fan out.
   for (let i = 0; i < police.length; i++) {
     const car = police[i];
     for (let j = 0; j < police.length; j++) {
@@ -64,7 +65,10 @@ export function updatePolice(state, dt) {
         car.y += ((car.y - other.y) / d) * push;
       }
     }
-    steerCarToward(car, player.x, player.y, dt, 0.92);
+    const surround = (i / Math.max(1, police.length)) * Math.PI * 2 + state.time * 0.12;
+    const tx = player.x + Math.cos(surround) * 95;
+    const ty = player.y + Math.sin(surround) * 95;
+    steerCarToward(car, tx, ty, dt, 0.92);
     const res = collideCircle(city, state.obstacles, car.x, car.y, 24);
     if (res.hit) { car.x = res.x; car.y = res.y; car.speed *= 0.55; if (Math.abs(car.speed) > 260) playCrash(); }
     if (dist(car.x, car.y, player.x, player.y) < 46 && Math.abs(car.speed) > 200) {
@@ -97,8 +101,9 @@ export function updatePolice(state, dt) {
   }
 
   // Roadblocks: at 3+ stars, seal the road ahead of the player with
-  // police cars placed across it. They are solid obstacles.
-  if (state.wanted >= 3 && !state.roadblock) {
+  // police cars placed across it. They are solid obstacles. A scene
+  // may suppress the roadblock to keep a chase in open road.
+  if (state.wanted >= 3 && !state.roadblock && !state.suppressRoadblock) {
     state.roadblock = buildRoadblock(state);
   }
   if (state.wanted < 3 && state.roadblock) {

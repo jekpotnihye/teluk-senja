@@ -109,16 +109,19 @@ export function createRenderer(canvas) {
     ctx.arc(0, -8 + bob, 6, 0, Math.PI * 2);
     ctx.fill();
     if (ped.guard) {
+      ctx.strokeStyle = '#ff3a2a';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(0, -2, 17, 0, Math.PI * 2); ctx.stroke();
       ctx.strokeStyle = '#222';
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.moveTo(4, 0);
-      ctx.lineTo(4 + Math.cos(ped.angle) * 16, Math.sin(ped.angle) * 16);
+      ctx.moveTo(6, 0);
+      ctx.lineTo(6 + Math.cos(ped.angle) * 22, Math.sin(ped.angle) * 22);
       ctx.stroke();
       ctx.fillStyle = '#ff5a4a';
-      ctx.fillRect(-8, -20, 16, 3);
+      ctx.fillRect(-11, -24, 22, 4);
       ctx.fillStyle = '#7a1a12';
-      ctx.fillRect(-8, -20, 16 * Math.max(0, ped.health / 100), 3);
+      ctx.fillRect(-11, -24, 22 * Math.max(0, ped.health / 100), 4);
     }
     ctx.restore();
   }
