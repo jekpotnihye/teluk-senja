@@ -70,14 +70,15 @@ export function drawHud(ctx, state, vw, vh) {
   const trackerW = Math.min(560, Math.max(320, vw - 560));
   const trackerX = 14;
   const trackerY = 156;
-  // Stars sit high and compact so the helicopter body, which flies
-  // just below them in the top-centre sky, never covers the label.
-  stars(ctx, vw / 2, 36, state.wanted);
+  // Stars sit left of centre so the helicopter body, which flies in
+  // the top-centre sky above the street, never covers the label.
+  const starCx = vw / 2 - 200;
+  stars(ctx, starCx, 36, state.wanted);
   if (state.wanted > 0) {
     ctx.font = 'bold 17px system-ui, sans-serif';
     ctx.fillStyle = '#ff6a5a';
     ctx.textAlign = 'center';
-    ctx.fillText('DICARI PTS', vw / 2, 58);
+    ctx.fillText('DICARI PTS', starCx, 58);
   }
   const step = currentStep(state);
   if (state.mission && step) {

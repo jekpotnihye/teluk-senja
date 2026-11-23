@@ -68,6 +68,34 @@ function stageCover(state) {
     car.speed = 300;
   });
   runSteps(state, 70, ['w'], { x: 1050, y: 300 });
+  // Re-ring the patrol cars one last time with flank-only angles and
+  // settle them for a few steps: the chase AI otherwise drifts a car
+  // directly behind the player, where the camera clips it against the
+  // bottom-left HUD panel. Clear pedestrians out of the camera's
+  // foreground too, so no bystander looms over the frame edge.
+  {
+    const heading2 = state.player.car ? state.player.car.angle : 0;
+    const flank2 = [0.5, -0.55, 1.15, -1.2, 2.05, -2.05];
+    state.police.forEach((car, i) => {
+      const a = heading2 + flank2[i % flank2.length];
+      car.x = state.player.x + Math.cos(a) * 400;
+      car.y = state.player.y + Math.sin(a) * 400;
+      car.speed = 300;
+    });
+    const fx = Math.cos(heading2); const fz = Math.sin(heading2);
+    for (const ped of state.peds) {
+      if (ped.guard) continue;
+      const dx = ped.x - state.player.x; const dy = ped.y - state.player.y;
+      const d = Math.hypot(dx, dy);
+      const along = dx * fx + dy * fz;
+      if (d < 330 && along < 90) {
+        const side = (dx * -fz + dy * fx) >= 0 ? 1 : -1;
+        ped.x = state.player.x + fx * 130 - fz * side * 300;
+        ped.y = state.player.y + fz * 130 + fx * side * 300;
+      }
+    }
+    runSteps(state, 4, ['w'], { x: 1050, y: 300 });
+  }
   return state;
 }
 

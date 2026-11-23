@@ -250,20 +250,44 @@ function makeFacadeTexture(gl) {
   ctx.fillRect(0, 0, 256, 256);
   // Large windows: 4 columns x 5 rows per tile. One tile spans a wide
   // facade (see Geo.box UV repeats), so windows read at building scale
-  // instead of dissolving into a dot grid.
+  // instead of dissolving into a dot grid. Each pane gets a
+  // deterministic variant — lit in warm or cool tones, blinds, or a
+  // faint tint — so repeated tiles do not look identical.
+  const litTones = ['#ffe9a8', '#bcd9ff', '#ffcf7a'];
   for (let r = 0; r < 5; r++) {
     for (let c = 0; c < 4; c++) {
-      const lit = (c === 1 && r === 1) || (c === 2 && r === 3);
+      const idx = r * 4 + c;
+      const lit = (idx * 7) % 5 < 2;
+      const x0 = 6 + c * 62; const y0 = 4 + r * 48;
       ctx.fillStyle = '#8d867a';
-      ctx.fillRect(6 + c * 62, 4 + r * 48, 48, 38);
-      ctx.fillStyle = lit ? '#ffe9a8' : '#2b313c';
-      ctx.fillRect(10 + c * 62, 8 + r * 48, 40, 30);
+      ctx.fillRect(x0, y0, 48, 38);
+      ctx.fillStyle = lit ? litTones[(idx * 3) % 3] : '#2b313c';
+      ctx.fillRect(x0 + 4, y0 + 4, 40, 30);
+      if (!lit && idx % 4 === 1) {
+        // Blinds: thin dark slats across a dark pane.
+        ctx.fillStyle = 'rgba(255,255,255,0.18)';
+        ctx.fillRect(x0 + 4, y0 + 12, 40, 2);
+        ctx.fillRect(x0 + 4, y0 + 20, 40, 2);
+        ctx.fillRect(x0 + 4, y0 + 28, 40, 2);
+      } else if (!lit && idx % 3 === 0) {
+        ctx.fillStyle = 'rgba(255,255,255,0.07)';
+        ctx.fillRect(x0 + 4, y0 + 4, 40, 30);
+      }
+      // Glass highlight + sill.
       ctx.fillStyle = 'rgba(255,255,255,0.25)';
-      ctx.fillRect(10 + c * 62, 8 + r * 48, 40, 4);
+      ctx.fillRect(x0 + 4, y0 + 4, 40, 4);
+      ctx.fillStyle = '#7a7264';
+      ctx.fillRect(x0, y0 + 38, 48, 3);
     }
     ctx.fillStyle = 'rgba(0,0,0,0.16)';
     ctx.fillRect(0, r * 48 + 46, 256, 2);
   }
+  // Panel division at the tile edge + a cornice band at the top, so
+  // wide facades read as separate panels instead of one flat wall.
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.fillRect(0, 0, 3, 256);
+  ctx.fillStyle = 'rgba(255,255,255,0.14)';
+  ctx.fillRect(0, 0, 256, 5);
   // Darker ground-floor band.
   ctx.fillStyle = 'rgba(0,0,0,0.28)';
   ctx.fillRect(0, 232, 256, 24);
@@ -343,8 +367,14 @@ function buildStatic(city) {
     geo.box(cx, h3 / 2, cz, w3, h3, d3, 0, tinted, {
       tex: true, uvU: Math.max(1, Math.round(b.w / 130)), uvV: Math.max(1, Math.round((h3 * SCALE) / 130)),
     });
-    // Roof parapet: a thin lighter slab on top.
-    geo.box(cx, h3 + 0.12, cz, w3 * 0.96, 0.24, d3 * 0.96, 0, shade(tinted, 1.25), {});
+    // Roof parapet: a thin slab on top. Its tone varies per building —
+    // some pale, some dark, a third brick-red — so neighbouring
+    // rooftops do not read as one identical trim.
+    const roofH = hash2(b.y | 0, b.x | 0);
+    const parapet = roofH > 0.66
+      ? [0.62 * tint, 0.30 * tint, 0.24 * tint]
+      : shade(tinted, 0.95 + roofH * 0.55);
+    geo.box(cx, h3 + 0.12, cz, w3 * 0.96, 0.24, d3 * 0.96, 0, parapet, {});
   }
   // Props.
   for (const pr of city.props) {
@@ -594,15 +624,25 @@ function drawCharacter(geo, trans, x, y, angle, shirt, skin, opt = {}) {
   geo.box(cx, 0.92 + bob, cz, 0.52, 0.62, 0.3, angle, s, {});
   geo.box(cx, 1.48 + bob, cz, 0.34, 0.34, 0.34, angle, sk, {});
   if (opt.aimAngle !== undefined) {
-    const ax = cx + Math.cos(opt.aimAngle) * 0.42; const az = cz + Math.sin(opt.aimAngle) * 0.42;
-    geo.box(ax, 1.0 + bob, az, 0.42, 0.1, 0.1, opt.aimAngle, [0.12, 0.12, 0.14], {});
+    // A longer, thicker aim arm plus a muzzle tip, so a guard's
+    // weapon reads at chase distance instead of vanishing.
+    const ax = cx + Math.cos(opt.aimAngle) * 0.46; const az = cz + Math.sin(opt.aimAngle) * 0.46;
+    geo.box(ax, 1.0 + bob, az, 0.56, 0.13, 0.13, opt.aimAngle, [0.10, 0.10, 0.12], {});
+    const tx = cx + Math.cos(opt.aimAngle) * 0.78; const tz = cz + Math.sin(opt.aimAngle) * 0.78;
+    geo.box(tx, 1.0 + bob, tz, 0.12, 0.12, 0.12, opt.aimAngle, [0.25, 0.25, 0.28], {});
   }
   if (opt.ring) geo.ring(cx, cz, 0.07, 0.55, 0.72, opt.ring, 0.95);
-  if (opt.healthBar !== undefined && opt.healthBar < 100) {
-    // Health bar floating above the head, facing the camera via billboard.
+  if (opt.healthBar !== undefined) {
+    // Health bar floating above the head, facing the camera via
+    // billboard. Guards always carry a visible bar (it shrinks as
+    // they take damage); a white frame, dark backing, and a bright
+    // fill make it read at chase distance.
     const right = opt.camRight || [1, 0, 0];
-    geo.billboard([cx, 1.95 + bob, cz], 0.8, 0.1, right, [0.35, 0.08, 0.08], 0.95);
-    geo.billboard([cx - (1 - opt.healthBar / 100) * 0.4, 1.95 + bob, cz], 0.8 * (opt.healthBar / 100), 0.1, right, [1, 0.3, 0.25], 0.95);
+    const by = 2.02 + bob;
+    const frac = Math.max(0, Math.min(1, opt.healthBar / 100));
+    geo.billboard([cx, by, cz], 1.24, 0.24, right, [0.95, 0.95, 0.95], 0.95);
+    geo.billboard([cx, by, cz], 1.12, 0.16, right, [0.25, 0.05, 0.05], 0.95);
+    geo.billboard([cx - (1 - frac) * 0.56, by, cz], Math.max(0.02, 1.12 * frac), 0.16, right, [1, 0.28, 0.20], 1);
   }
 }
 
@@ -614,19 +654,42 @@ function drawHelicopter(geo, trans, h, time, camRight) {
   // A bigger body scale makes it read at chase distance.
   const alt = 6.8;
   const k = 1.6; // body scale
-  const body = [0.22, 0.40, 0.52];
-  geo.box(cx, alt, cz, 2.4 * k, 0.85 * k, 1.0 * k, h.angle * 0.15, body, {});
-  geo.box(cx - Math.cos(h.angle * 0.15) * 1.9 * k, alt + 0.1, cz - Math.sin(h.angle * 0.15) * 1.9 * k, 1.5 * k, 0.3 * k, 0.3 * k, h.angle * 0.15, body, {});
-  geo.box(cx + Math.cos(h.angle * 0.15) * 0.7 * k, alt + 0.1, cz + Math.sin(h.angle * 0.15) * 0.7 * k, 0.5 * k, 0.5 * k, 0.7 * k, h.angle * 0.15, [0.55, 0.75, 0.88], {});
+  // Dark PTS livery with a white cheatline, so the helicopter reads as
+  // a police aircraft instead of a plain blue slab.
+  const body = [0.13, 0.24, 0.38];
+  const yaw = h.angle * 0.15;
+  const cy = Math.cos(yaw); const sy = Math.sin(yaw);
+  geo.box(cx, alt, cz, 2.4 * k, 0.85 * k, 1.0 * k, yaw, body, {});
+  // White cheatline along both flanks.
+  geo.box(cx, alt - 0.08, cz, 2.0 * k, 0.2 * k, 1.04 * k, yaw, [0.92, 0.92, 0.95], {});
+  // Dark cockpit windshield at the nose.
+  geo.box(cx + cy * 0.95 * k, alt + 0.12, cz + sy * 0.95 * k, 0.5 * k, 0.45 * k, 0.72 * k, yaw, [0.07, 0.11, 0.16], { emis: 0.3 });
+  // Tail boom, tail fin, and a small tail rotor. The boom is thick
+  // and overlaps the body so the tail reads as one connected
+  // silhouette instead of a floating slab; a mast joins the rotor
+  // to the roof.
+  geo.box(cx - cy * 1.7 * k, alt + 0.1, cz - sy * 1.7 * k, 1.25 * k, 0.42 * k, 0.42 * k, yaw, [0.20, 0.34, 0.50], {});
+  geo.box(cx - cy * 2.25 * k, alt + 0.45, cz - sy * 2.25 * k, 0.55 * k, 0.95 * k, 0.12 * k, yaw, [0.10, 0.18, 0.30], {});
+  geo.box(cx - cy * 2.25 * k, alt + 0.75, cz - sy * 2.25 * k, 0.1 * k, 0.12 * k, 1.0 * k, yaw, [0.10, 0.18, 0.30], {});
+  geo.box(cx - cy * 2.3 * k, alt + 0.5, cz - sy * 2.3 * k, 0.06, 0.5 * k, 0.06, yaw + Math.PI / 2, [0.12, 0.12, 0.14], {});
+  geo.box(cx, alt + 0.55 * k, cz, 0.15, 0.35, 0.15, yaw, [0.12, 0.12, 0.14], {});
+  // Skid struts + skids.
+  geo.box(cx - 0.3 * k, alt - 0.45 * k, cz, 0.08, 0.4 * k, 0.08, yaw, [0.15, 0.15, 0.17], {});
+  geo.box(cx + 0.3 * k, alt - 0.45 * k, cz, 0.08, 0.4 * k, 0.08, yaw, [0.15, 0.15, 0.17], {});
+  geo.box(cx - 0.3 * k, alt - 0.62 * k, cz, 1.6 * k, 0.08, 0.08, yaw, [0.15, 0.15, 0.17], {});
+  geo.box(cx + 0.3 * k, alt - 0.62 * k, cz, 1.6 * k, 0.08, 0.08, yaw, [0.15, 0.15, 0.17], {});
+  // Navigation lights: red on the left skid tip, green on the right.
+  const px = -sy; const pz = cy;
+  geo.box(cx + px * 0.62 * k, alt - 0.62 * k, cz + pz * 0.62 * k, 0.12, 0.12, 0.12, yaw, [1, 0.15, 0.1], { emis: 1 });
+  geo.box(cx - px * 0.62 * k, alt - 0.62 * k, cz - pz * 0.62 * k, 0.12, 0.12, 0.12, yaw, [0.2, 1, 0.35], { emis: 1 });
+  // Bright spotlight emitter under the nose, feeding the cone below.
+  geo.box(cx + cy * 0.6 * k, alt - 0.5 * k, cz + sy * 0.6 * k, 0.2, 0.14, 0.2, yaw, [1, 0.97, 0.8], { emis: 1 });
   // Rotor, spinning. Short blades, kept inside the body's silhouette:
   // a full-length blade swept up across the wanted stars in the
   // chase frame.
   const ra = h.rotor;
   geo.box(cx, alt + 0.62 * k, cz, 1.2 * k, 0.07, 0.14, ra, [0.1, 0.1, 0.12], {});
   geo.box(cx, alt + 0.62 * k, cz, 0.14, 0.07, 1.2 * k, ra, [0.1, 0.1, 0.12], {});
-  // Skids.
-  geo.box(cx - 0.3 * k, alt - 0.62 * k, cz, 1.6 * k, 0.08, 0.08, h.angle * 0.15, [0.15, 0.15, 0.17], {});
-  geo.box(cx + 0.3 * k, alt - 0.62 * k, cz, 1.6 * k, 0.08, 0.08, h.angle * 0.15, [0.15, 0.15, 0.17], {});
   // Searchlight cone + ground pool: narrower and a touch softer now
   // that the helicopter flies lower, so the beam reads without
   // washing out the street.
