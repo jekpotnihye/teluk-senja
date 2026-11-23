@@ -1,53 +1,46 @@
-// Keyboard and pointer input. Held keys give a steering direction; one-shot presses (start or
-// restart, pause) are queued as bit flags and taken once by the loop, so a press between two
-// frames is never lost and never counted twice.
-
-export const ACTION_CONFIRM = 1;
-export const ACTION_PAUSE = 2;
-
-const LEFT = new Set(['ArrowLeft', 'KeyA']);
-const RIGHT = new Set(['ArrowRight', 'KeyD']);
-const CONFIRM = new Set(['Space', 'Enter']);
-const PAUSE = new Set(['KeyP', 'Escape']);
-
-export function createInput(target) {
-  let left = false;
-  let right = false;
-  let actions = 0;
-
-  window.addEventListener('keydown', (event) => {
-    if (LEFT.has(event.code)) left = true;
-    else if (RIGHT.has(event.code)) right = true;
-    else if (CONFIRM.has(event.code)) {
-      if (!event.repeat) actions |= ACTION_CONFIRM;
-    } else if (PAUSE.has(event.code)) {
-      if (!event.repeat) actions |= ACTION_PAUSE;
-    } else return;
-    event.preventDefault();
-  });
-  window.addEventListener('keyup', (event) => {
-    if (LEFT.has(event.code)) left = false;
-    else if (RIGHT.has(event.code)) right = false;
-  });
-  // A key released while the tab is hidden never sends keyup: let go of everything on blur.
-  window.addEventListener('blur', () => {
-    left = false;
-    right = false;
-  });
-  target.addEventListener('pointerdown', () => {
-    actions |= ACTION_CONFIRM;
-  });
-
-  return {
-    /** -1 for left, 1 for right, 0 for neither or both. */
-    direction() {
-      return (right ? 1 : 0) - (left ? 1 : 0);
-    },
-    /** The one-shot presses since the last call, as ACTION_* flags. */
-    takeActions() {
-      const taken = actions;
-      actions = 0;
-      return taken;
-    },
+// Keyboard + mouse input. The live game reads the real devices; the
+// screenshot stager drives the same shape with scripted values.
+export function createInput(canvas) {
+  const input = {
+    keys: new Set(),
+    mouseX: 0, mouseY: 0, mouseDown: false,
+    pressed: new Set(), // edge-triggered keys, consumed each step
+    scripted: null,
   };
+  const keyName = (e) => e.key.length === 1 ? e.key.toLowerCase() : e.key;
+
+  window.addEventListener('keydown', (e) => {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
+    const k = keyName(e);
+    if (!input.keys.has(k)) input.pressed.add(k);
+    input.keys.add(k);
+  });
+  window.addEventListener('keyup', (e) => { input.keys.delete(keyName(e)); });
+  window.addEventListener('blur', () => { input.keys.clear(); input.mouseDown = false; });
+
+  canvas.addEventListener('mousemove', (e) => {
+    const r = canvas.getBoundingClientRect();
+    input.mouseX = e.clientX - r.left;
+    input.mouseY = e.clientY - r.top;
+  });
+  canvas.addEventListener('mousedown', (e) => {
+    if (e.button === 0) input.mouseDown = true;
+    const r = canvas.getBoundingClientRect();
+    input.mouseX = e.clientX - r.left;
+    input.mouseY = e.clientY - r.top;
+  });
+  window.addEventListener('mouseup', () => { input.mouseDown = false; });
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  return input;
 }
+
+export function wasPressed(input, key) {
+  return input.scripted ? !!input.scripted.pressed?.has(key) : input.pressed.has(key);
+}
+
+export function keyDown(input, key) {
+  if (input.scripted) return !!input.scripted.keys?.has(key);
+  return input.keys.has(key);
+}
+
+export function clearPressed(input) { input.pressed.clear(); }
