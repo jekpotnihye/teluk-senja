@@ -30,7 +30,7 @@ function runShot(name) {
   state.camera.h = 720;
   let painted = 0;
   function paint() {
-    renderer.draw(state, screen, null);
+    renderer.draw(state, screen, null, true);
     painted += 1;
     if (painted < 2) requestAnimationFrame(paint);
     else window.__shotReady = true;

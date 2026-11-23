@@ -90,7 +90,11 @@ export function updatePolice(state, dt) {
     }
     const h = state.helicopter;
     h.rotor += dt * 30;
-    const tx = player.x - 40; const ty = player.y - 120;
+    // Hover well ahead of the player, offset to one side, so the
+    // helicopter body (not just its cone) stays in the third-person frame.
+    const heading = player.car ? player.car.angle : player.angle;
+    const tx = player.x + Math.cos(heading) * 380 - Math.sin(heading) * 90;
+    const ty = player.y + Math.sin(heading) * 380 + Math.cos(heading) * 90;
     h.x += (tx - h.x) * Math.min(1, dt * 2.8);
     h.y += (ty - h.y) * Math.min(1, dt * 2.8);
     h.lightX += (player.x - h.lightX) * Math.min(1, dt * 4);

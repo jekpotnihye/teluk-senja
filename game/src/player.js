@@ -9,6 +9,7 @@ import { addWanted, damagePlayer } from './police.js';
 import { keyDown, wasPressed } from './input.js';
 import { playShot, playHit } from './audio.js';
 import { scareNearby } from './pedestrians.js';
+import { screenToGround } from './gl3d.js';
 
 export function makePlayer(x, y) {
   return {
@@ -37,11 +38,11 @@ export function updatePlayer(state, input, dt) {
   p.fireTimer = Math.max(0, p.fireTimer - dt);
   p.invuln = Math.max(0, p.invuln - dt);
 
-  // Aim follows the mouse in world space.
+  // Aim follows the mouse: unproject the screen point onto the ground
+  // plane through the 3D camera, so aiming works in the 3D view.
   const cam = state.camera;
-  const mouseWorldX = cam.x + input.mouseX;
-  const mouseWorldY = cam.y + input.mouseY;
-  p.aimAngle = angleTo(p.x, p.y, mouseWorldX, mouseWorldY);
+  const ground = screenToGround(state, input.mouseX, input.mouseY, cam.w, cam.h);
+  if (ground) p.aimAngle = angleTo(p.x, p.y, ground.x, ground.y);
 
   if (p.onFoot) {
     updateOnFoot(state, input, dt);

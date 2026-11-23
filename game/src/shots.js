@@ -56,8 +56,13 @@ function stageCover(state) {
   state.suppressRoadblock = true;
   state.message = 'Kabur dari PTS — capai titik aman di timur, dengan bintang 0.';
   state.messageTimer = 30;
+  // Ring the patrol cars in close so the chase reads at once, but
+  // keep them off the camera axis behind the player: a car sitting
+  // exactly behind Raka would hide his car from the third-person view.
+  const heading = state.player.car ? state.player.car.angle : 0;
+  const flankAngles = [0.45, -0.6, 2.35, -2.35, 1.2, -1.5];
   state.police.forEach((car, i) => {
-    const a = (i / Math.max(1, state.police.length)) * Math.PI * 2;
+    const a = heading + flankAngles[i % flankAngles.length];
     car.x = state.player.x + Math.cos(a) * 380;
     car.y = state.player.y + Math.sin(a) * 380;
     car.speed = 300;
@@ -70,6 +75,9 @@ function stageOnFoot(state) {
   // Mission 4 (warehouse shootout): Raka on foot at the Pelabuhan
   // crossroads with the guards in the open, Bang Dodi walking with him.
   startMission(state, 3);
+  // Face north, toward the warehouse guards, so the third-person
+  // camera sits behind Raka and the guards are in frame.
+  state.player.angle = -Math.PI / 2;
   state.player.x = 900; state.player.y = 1640;
   state.player.onFoot = true;
   state.player.weaponIndex = 0;
