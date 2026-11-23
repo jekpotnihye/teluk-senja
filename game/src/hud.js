@@ -63,15 +63,21 @@ export function drawHud(ctx, state, vw, vh) {
   ctx.fillStyle = '#ffffff';
   ctx.fillText(`Misi selesai ${state.completedMissions}/8`, 26, 126);
 
-  // --- Top centre: wanted stars + mission tracker.
-  const trackerW = Math.min(660, vw - 560);
-  const trackerX = (vw - trackerW) / 2;
-  stars(ctx, vw / 2, 44, state.wanted);
+  // --- Top centre: wanted stars only. The mission tracker moved to
+  // the left column so the sky above the street stays open for the
+  // helicopter; the centre message banner moved to the bottom centre
+  // for the same reason.
+  const trackerW = Math.min(560, Math.max(320, vw - 560));
+  const trackerX = 14;
+  const trackerY = 156;
+  // Stars sit high and compact so the helicopter body, which flies
+  // just below them in the top-centre sky, never covers the label.
+  stars(ctx, vw / 2, 36, state.wanted);
   if (state.wanted > 0) {
-    ctx.font = 'bold 19px system-ui, sans-serif';
+    ctx.font = 'bold 17px system-ui, sans-serif';
     ctx.fillStyle = '#ff6a5a';
     ctx.textAlign = 'center';
-    ctx.fillText('DICARI PTS', vw / 2, 68);
+    ctx.fillText('DICARI PTS', vw / 2, 58);
   }
   const step = currentStep(state);
   if (state.mission && step) {
@@ -79,7 +85,7 @@ export function drawHud(ctx, state, vw, vh) {
     const title = `Misi ${state.mission.id}/8: ${state.mission.title}  •  ${state.mission.giver}`;
     const lines = wrapText(ctx, step.label, trackerW - 28);
     const th = 34 + lines.length * 24 + 12;
-    const ty = state.wanted > 0 ? 74 : 56;
+    const ty = trackerY;
     panel(ctx, trackerX, ty, trackerW, th);
     ctx.textAlign = 'left';
     ctx.fillStyle = '#ffd76a';
@@ -89,20 +95,21 @@ export function drawHud(ctx, state, vw, vh) {
     lines.forEach((line, i) => ctx.fillText(line, trackerX + 14, ty + 48 + i * 24));
     state._missionBottom = ty + th;
   } else if (state.completedMissions >= 8) {
-    panel(ctx, trackerX, 56, trackerW, 40);
+    panel(ctx, trackerX, trackerY, trackerW, 40);
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ffd76a';
     ctx.font = 'bold 19px system-ui, sans-serif';
-    ctx.fillText('SEMUA MISI SELESAI — Teluk Senja bebas!', vw / 2, 82);
+    ctx.fillText('SEMUA MISI SELESAI — Teluk Senja bebas!', trackerX + trackerW / 2, trackerY + 26);
   }
 
-  // --- Centre message banner (below the tracker, never overlapping it).
+  // --- Bottom-centre message banner (below the tracker, above the
+  // bottom panels, never covering the sky above the street).
   if (state.messageTimer > 0 && state.message) {
     ctx.font = '19px system-ui, sans-serif';
-    const mw = Math.min(760, vw - 80);
+    const mw = Math.min(620, vw - 80);
     const mlines = wrapText(ctx, state.message, mw - 30);
     const mh = mlines.length * 24 + 18;
-    const my = (state._missionBottom || 150) + 10;
+    const my = vh - 140 - mh;
     panel(ctx, (vw - mw) / 2, my, mw, mh);
     ctx.textAlign = 'left';
     ctx.fillStyle = '#ffffff';

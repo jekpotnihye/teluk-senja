@@ -608,29 +608,33 @@ function drawCharacter(geo, trans, x, y, angle, shirt, skin, opt = {}) {
 
 function drawHelicopter(geo, trans, h, time, camRight) {
   const cx = wx(h.x); const cz = wz(h.y);
-  // Alt 10.5 with the hover ahead/side keeps the searchlight cone
-  // clearly visible; lower altitudes hid the body behind the HUD
-  // banner anyway and washed the frame out with the cone.
-  const alt = 10.5;
-  const k = 1.35; // body scale
+  // Lower altitude and a hover near the road centreline keep the
+  // body inside the third-person frame against the open sky (the HUD
+  // tracker/banner moved off the top centre for the same reason).
+  // A bigger body scale makes it read at chase distance.
+  const alt = 6.8;
+  const k = 1.6; // body scale
   const body = [0.22, 0.40, 0.52];
   geo.box(cx, alt, cz, 2.4 * k, 0.85 * k, 1.0 * k, h.angle * 0.15, body, {});
   geo.box(cx - Math.cos(h.angle * 0.15) * 1.9 * k, alt + 0.1, cz - Math.sin(h.angle * 0.15) * 1.9 * k, 1.5 * k, 0.3 * k, 0.3 * k, h.angle * 0.15, body, {});
   geo.box(cx + Math.cos(h.angle * 0.15) * 0.7 * k, alt + 0.1, cz + Math.sin(h.angle * 0.15) * 0.7 * k, 0.5 * k, 0.5 * k, 0.7 * k, h.angle * 0.15, [0.55, 0.75, 0.88], {});
-  // Rotor, spinning.
+  // Rotor, spinning. Short blades, kept inside the body's silhouette:
+  // a full-length blade swept up across the wanted stars in the
+  // chase frame.
   const ra = h.rotor;
-  geo.box(cx, alt + 0.62 * k, cz, 3.4 * k, 0.07, 0.14, ra, [0.1, 0.1, 0.12], {});
-  geo.box(cx, alt + 0.62 * k, cz, 0.14, 0.07, 3.4 * k, ra, [0.1, 0.1, 0.12], {});
+  geo.box(cx, alt + 0.62 * k, cz, 1.2 * k, 0.07, 0.14, ra, [0.1, 0.1, 0.12], {});
+  geo.box(cx, alt + 0.62 * k, cz, 0.14, 0.07, 1.2 * k, ra, [0.1, 0.1, 0.12], {});
   // Skids.
   geo.box(cx - 0.3 * k, alt - 0.62 * k, cz, 1.6 * k, 0.08, 0.08, h.angle * 0.15, [0.15, 0.15, 0.17], {});
   geo.box(cx + 0.3 * k, alt - 0.62 * k, cz, 1.6 * k, 0.08, 0.08, h.angle * 0.15, [0.15, 0.15, 0.17], {});
-  // Searchlight cone + ground pool: wider and brighter so the beam
-  // reads against the street, not just as a faint slant.
+  // Searchlight cone + ground pool: narrower and a touch softer now
+  // that the helicopter flies lower, so the beam reads without
+  // washing out the street.
   const lx = wx(h.lightX); const lz = wz(h.lightY);
-  trans.cone([cx, alt - 0.3, cz], [lx, 0.1, lz], 2.4, [1, 0.96, 0.78], 0.34, 10);
+  trans.cone([cx, alt - 0.3, cz], [lx, 0.1, lz], 1.8, [1, 0.96, 0.78], 0.20, 10);
   trans.quad(
     [lx - 1.9, 0.08, lz - 1.1], [lx + 1.9, 0.08, lz - 1.1], [lx + 1.9, 0.08, lz + 1.1], [lx - 1.9, 0.08, lz + 1.1],
-    [0, 1, 0], [1, 0.96, 0.78], [[0, 0], [1, 0], [1, 1], [0, 1]], 0, 0, 0.45);
+    [0, 1, 0], [1, 0.96, 0.78], [[0, 0], [1, 0], [1, 1], [0, 1]], 0, 0, 0.30);
   // Shadow blob on the ground.
   trans.quad(
     [lx - 1.2, 0.06, lz - 0.5], [lx + 1.2, 0.06, lz - 0.5], [lx + 1.2, 0.06, lz + 0.5], [lx - 1.2, 0.06, lz + 0.5],

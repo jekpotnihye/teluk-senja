@@ -90,11 +90,14 @@ export function updatePolice(state, dt) {
     }
     const h = state.helicopter;
     h.rotor += dt * 30;
-    // Hover ahead of the player, offset to one side, so the
-    // searchlight cone reads in the third-person frame.
+    // Hover ahead of the player, close to the road centreline, so the
+    // helicopter body itself reads in the third-person frame against
+    // the open sky above the street (the old wide side offset put it
+    // over the blocks, and high altitudes pushed it off the top edge
+    // or behind the HUD banner).
     const heading = player.car ? player.car.angle : player.angle;
-    const tx = player.x + Math.cos(heading) * 280 - Math.sin(heading) * 200;
-    const ty = player.y + Math.sin(heading) * 280 + Math.cos(heading) * 200;
+    const tx = player.x + Math.cos(heading) * 330 - Math.sin(heading) * 60;
+    const ty = player.y + Math.sin(heading) * 330 + Math.cos(heading) * 60;
     h.x += (tx - h.x) * Math.min(1, dt * 2.8);
     h.y += (ty - h.y) * Math.min(1, dt * 2.8);
     h.lightX += (player.x - h.lightX) * Math.min(1, dt * 4);
