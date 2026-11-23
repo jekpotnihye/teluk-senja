@@ -46,7 +46,7 @@ export function drawHud(ctx, state, vw, vh) {
   ctx.textBaseline = 'alphabetic';
 
   // --- Top left: survival + progression.
-  panel(ctx, 14, 12, 268, 118);
+  panel(ctx, 14, 12, 268, 134);
   ctx.textAlign = 'left';
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 17px system-ui, sans-serif';
@@ -56,12 +56,12 @@ export function drawHud(ctx, state, vw, vh) {
   bar(ctx, 96, 48, 172, 15, p.armor / 100, '#4aa8ff', '#152033');
   ctx.font = 'bold 24px system-ui, sans-serif';
   ctx.fillStyle = '#ffd76a';
-  ctx.fillText(`$${p.cash}`, 26, 100);
+  ctx.fillText(`$${p.cash}`, 26, 98);
   ctx.fillStyle = '#7ac2ff';
-  ctx.fillText(`Hormat ${p.respect}`, 138, 100);
+  ctx.fillText(`Hormat ${p.respect}`, 138, 98);
   ctx.font = 'bold 15px system-ui, sans-serif';
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(`Misi selesai ${state.completedMissions}/8`, 26, 122);
+  ctx.fillText(`Misi selesai ${state.completedMissions}/8`, 26, 126);
 
   // --- Top centre: wanted stars + mission tracker.
   const trackerW = Math.min(660, vw - 560);
@@ -109,30 +109,53 @@ export function drawHud(ctx, state, vw, vh) {
     mlines.forEach((line, i) => ctx.fillText(line, (vw - mw) / 2 + 15, my + 24 + i * 24));
   }
 
-  // --- Top right: minimap + district.
+  // --- Top right: minimap + district + PTS dispatch board.
   const mw2 = 212; const mh2 = 158;
   drawMinimap(ctx, state, vw - mw2 - 14, 12, mw2, mh2);
   ctx.textAlign = 'right';
   ctx.font = 'bold 18px system-ui, sans-serif';
   ctx.fillStyle = '#ffffff';
   ctx.fillText(state.district || 'Kota Tua', vw - 16, 192);
+  // Dispatch board: named PTS units en route, with live distances.
+  const dbY = 200; const dbH = 34 + Math.max(1, Math.min(3, state.police.length)) * 22 + (state.helicopter ? 22 : 0) + 10;
+  panel(ctx, vw - mw2 - 14, dbY, mw2, dbH);
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#ffd76a';
+  ctx.font = 'bold 15px system-ui, sans-serif';
+  ctx.fillText('PAPAN DISPATCH PTS', vw - mw2, dbY + 20);
+  ctx.font = '15px system-ui, sans-serif';
+  if (state.police.length === 0) {
+    ctx.fillStyle = '#cfd6e4';
+    ctx.fillText('Tidak ada unit mengejar.', vw - mw2, dbY + 44);
+  } else {
+    state.police.slice(0, 3).forEach((car, i) => {
+      const d = Math.round(Math.hypot(car.x - p.x, car.y - p.y));
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(`UNIT K-${i + 1} · ${d} m`, vw - mw2, dbY + 44 + i * 22);
+    });
+    if (state.helicopter) {
+      ctx.fillStyle = '#7ac2ff';
+      ctx.fillText('HELI CONDOR · di atasmu', vw - mw2, dbY + 44 + Math.min(3, state.police.length) * 22);
+    }
+  }
 
   // --- Bottom left: weapon slots, speed, clock, radio.
-  const bw = 330;
+  const bw = 396;
   panel(ctx, 14, vh - 128, bw, 114);
   ctx.textAlign = 'left';
   ctx.font = 'bold 16px system-ui, sans-serif';
   ctx.fillStyle = '#ffffff';
   ctx.fillText('SENJATA', 26, vh - 104);
+  const slotNames = ['1 Pistol', '2 Bedil', '3 Hujan'];
   WEAPONS.forEach((w, i) => {
-    const bx = 26 + i * 104; const by = vh - 96;
+    const bx = 26 + i * 122; const by = vh - 96;
     ctx.fillStyle = i === p.weaponIndex ? 'rgba(255, 214, 106, 0.35)' : 'rgba(255,255,255,0.10)';
-    ctx.fillRect(bx, by, 96, 34);
+    ctx.fillRect(bx, by, 114, 34);
     ctx.strokeStyle = i === p.weaponIndex ? '#ffd76a' : 'rgba(255,255,255,0.4)';
-    ctx.strokeRect(bx, by, 96, 34);
+    ctx.strokeRect(bx, by, 114, 34);
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 14px system-ui, sans-serif';
-    ctx.fillText(`${i + 1} ${w.name}`, bx + 7, by + 22);
+    ctx.fillText(slotNames[i], bx + 7, by + 22);
   });
   const hours = Math.floor(state.clockMin / 60) % 24;
   const mins = Math.floor(state.clockMin % 60);
@@ -143,22 +166,35 @@ export function drawHud(ctx, state, vw, vh) {
   ctx.fillText(`${speed} km/j`, 26, vh - 34);
   ctx.fillText(clock, 140, vh - 34);
   ctx.fillStyle = RADIO_STATIONS[state.radioStation].hue;
-  ctx.fillText('♪ ' + RADIO_STATIONS[state.radioStation].name, 214, vh - 34);
+  ctx.font = 'bold 17px system-ui, sans-serif';
+  ctx.fillText('♪ ' + RADIO_STATIONS[state.radioStation].name, 226, vh - 34);
 
-  // --- Bottom right: crew, garage and controls.
-  const cw = 372;
+  // --- Bottom right: crew portraits, garage and controls.
+  const cw = 392;
   panel(ctx, vw - cw - 14, vh - 128, cw, 114);
+  ctx.textAlign = 'left';
+  // Crew portraits: initials in coloured circles, with ability + cooldown.
+  const sinta = state.crewCooldowns.sinta > 0 ? `Sinta (${Math.ceil(state.crewCooldowns.sinta)}s)` : 'Sinta: pengalih PTS';
+  const dodi = state.crewCooldowns.dodi > 0 ? `Bang Dodi (${Math.ceil(state.crewCooldowns.dodi)}s)` : 'Bang Dodi: bengkel';
+  ctx.fillStyle = '#ff9ad5';
+  ctx.beginPath(); ctx.arc(vw - cw + 2, vh - 110, 11, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#3a1428';
+  ctx.font = 'bold 13px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('S', vw - cw + 2, vh - 105);
+  ctx.fillStyle = '#7ac2ff';
+  ctx.beginPath(); ctx.arc(vw - cw + 2, vh - 88, 11, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#12283a';
+  ctx.fillText('D', vw - cw + 2, vh - 83);
   ctx.textAlign = 'left';
   ctx.font = 'bold 15px system-ui, sans-serif';
   ctx.fillStyle = '#ffffff';
-  const sinta = state.crewCooldowns.sinta > 0 ? `Q Sinta (${Math.ceil(state.crewCooldowns.sinta)}s)` : 'Q Sinta: pengalih PTS';
-  const dodi = state.crewCooldowns.dodi > 0 ? `F Bang Dodi (${Math.ceil(state.crewCooldowns.dodi)}s)` : 'F Bang Dodi: bengkel';
-  ctx.fillText(sinta, vw - cw, vh - 104);
-  ctx.fillText(dodi, vw - cw, vh - 82);
+  ctx.fillText('Q ' + sinta, vw - cw + 20, vh - 104);
+  ctx.fillText('F ' + dodi, vw - cw + 20, vh - 82);
   ctx.fillStyle = '#ffd76a';
   ctx.fillText('G: garasi (di halaman bengkel)', vw - cw, vh - 60);
   ctx.fillStyle = '#cfd6e4';
-  ctx.font = '15px system-ui, sans-serif';
+  ctx.font = '14px system-ui, sans-serif';
   ctx.fillText('WASD gerak/nyetir · E naik-turun mobil · Klik tembak', vw - cw, vh - 38);
   ctx.fillText('1/2/3 senjata · R radio · Shift lari · P jeda', vw - cw, vh - 20);
 }

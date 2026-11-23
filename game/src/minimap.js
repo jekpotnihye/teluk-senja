@@ -63,6 +63,21 @@ export function drawMinimap(ctx, state, x, y, w, h) {
   }
   // Police.
   for (const car of state.police) dot(car.x, car.y, 3, '#4aa8ff');
+  // Helicopter searchlight cone, drawn on the minimap too.
+  if (state.helicopter) {
+    const hx = x + state.helicopter.x * sx; const hy = y + state.helicopter.y * sy;
+    const lx = x + state.helicopter.lightX * sx; const ly = y + state.helicopter.lightY * sy;
+    ctx.save();
+    ctx.globalAlpha = 0.30;
+    ctx.fillStyle = '#fff6c8';
+    ctx.beginPath();
+    ctx.moveTo(hx, hy);
+    ctx.lineTo(lx - 7, ly);
+    ctx.lineTo(lx + 7, ly);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
   // Helicopter.
   if (state.helicopter) {
     ctx.fillStyle = '#ffffff';

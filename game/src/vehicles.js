@@ -15,6 +15,7 @@ export function makeCar(defKey, x, y, angle, kind) {
     w: 52, h: 26,
     kind: kind || 'civil', // civil | parked | police | player
     health: 100,
+    braking: false,
     cruise: 0.55,
     axis: 'x', dir: 1,
     stuck: 0,
@@ -114,6 +115,7 @@ export function updateTraffic(state, dt) {
       if (along > 0 && along < ahead && lateral < 34) ahead = along;
     }
     const target = ahead < 90 ? 40 : car.cruise * 260;
+    car.braking = target < car.speed - 20;
     car.speed += clamp(target - car.speed, -300 * dt, 200 * dt);
     // At an intersection, sometimes turn onto the crossing road.
     const nearX = ROAD_X.some((rx) => Math.abs(car.x - rx) < 14 && car.axis === 'x');

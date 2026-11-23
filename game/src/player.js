@@ -116,6 +116,7 @@ function updateDriving(state, input, dt) {
       car.health -= (impact - 220) / 14;
       car.speed *= -0.25;
       damagePlayer(state, 3);
+      state.shake = 0.4;
       state.message = 'Tabrakan! Mobil rusak.';
       state.messageTimer = 2;
     } else {

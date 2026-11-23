@@ -39,8 +39,8 @@ export const MISSIONS = [
     giver: 'Bang Dodi',
     brief: 'Anak buah Tuan Kala menyimpan muatan selundupan di gudang Pelabuhan Senja. Masuk ke gudang, kalahkan penjaganya, dan ambil dokumen muatannya. Bawa dokumen itu kembali ke Sinta.',
     steps: [
-      { type: 'defeat', x: 700, y: 1450, label: 'Kalahkan 3 penjaga gudang di Pelabuhan Senja', count: 3, guards: [[640, 1400], [760, 1500], [700, 1560]] },
-      { type: 'collect', x: 700, y: 1450, label: 'Ambil dokumen muatan di gudang' },
+      { type: 'defeat', x: 900, y: 1300, label: 'Kalahkan 3 penjaga gudang di perempatan Pelabuhan Senja', count: 3, guards: [[850, 1250], [950, 1250], [900, 1360]] },
+      { type: 'collect', x: 900, y: 1300, label: 'Ambil dokumen muatan di gudang' },
       { type: 'talk', x: 3050, y: 2650, label: 'Serahkan dokumen ke Sinta', npc: 'Sinta' },
     ],
     reward: 260, respect: 20,
@@ -70,8 +70,8 @@ export const MISSIONS = [
     brief: 'Tuan Kala mengadakan pertemuan di Dermaga Lama. Sinta akan mengalihkan perhatian anak buahnya sementara kamu menyusup, mengalahkan penjaga, dan mengambil kunci kontainernya.',
     steps: [
       { type: 'talk', x: 3050, y: 2650, label: 'Temui Sinta — dia akan mengalihkan perhatian' , npc: 'Sinta' },
-      { type: 'defeat', x: 3600, y: 2650, label: 'Kalahkan 4 penjaga di Dermaga Lama', count: 4, guards: [[3540, 2600], [3660, 2600], [3540, 2720], [3660, 2720]] },
-      { type: 'collect', x: 3600, y: 2650, label: 'Ambil kunci kontainer Tuan Kala' },
+      { type: 'defeat', x: 3300, y: 2650, label: 'Kalahkan 4 penjaga di jalan Dermaga Lama', count: 4, guards: [[3250, 2600], [3350, 2600], [3250, 2700], [3350, 2700]] },
+      { type: 'collect', x: 3300, y: 2650, label: 'Ambil kunci kontainer Tuan Kala' },
     ],
     reward: 380, respect: 28,
   },
@@ -80,8 +80,8 @@ export const MISSIONS = [
     giver: 'Bang Dodi',
     brief: 'Ini puncaknya. Tuan Kala sendiri menjaga kapal terakhirnya di Pelabuhan Senja. Kalahkan pengawalnya, rebut kapalnya, dan akhiri kekuasaan selundupannya atas Teluk Senja — untuk selamanya.',
     steps: [
-      { type: 'defeat', x: 350, y: 650, label: 'Kalahkan 5 pengawal Tuan Kala di Pelabuhan Senja', count: 5, guards: [[300, 600], [400, 600], [300, 720], [400, 720], [350, 660]] },
-      { type: 'collect', x: 350, y: 650, label: 'Rebut kunci kapal Tuan Kala' },
+      { type: 'defeat', x: 300, y: 650, label: 'Kalahkan 5 pengawal Tuan Kala di jalan pelabuhan', count: 5, guards: [[250, 600], [350, 600], [250, 700], [350, 700], [300, 650]] },
+      { type: 'collect', x: 300, y: 650, label: 'Rebut kunci kapal Tuan Kala' },
       { type: 'goto', x: 2100, y: 1500, label: 'Kembali ke tengah Kota Tua — Teluk Senja bebas' },
     ],
     reward: 500, respect: 40,

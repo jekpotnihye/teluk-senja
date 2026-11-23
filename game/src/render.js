@@ -22,10 +22,24 @@ export function createRenderer(canvas) {
     canvas.style.height = '100%';
   }
 
-  function drawCarShape(car, isPlayer, time) {
+  function drawCarShape(car, isPlayer, time, nightF) {
     ctx.save();
     ctx.translate(car.x, car.y);
     ctx.rotate(car.angle);
+    // Headlight beams after dusk.
+    if ((nightF || 0) > 0.25) {
+      ctx.save();
+      ctx.globalAlpha = 0.16 * nightF;
+      ctx.fillStyle = '#fff6c8';
+      ctx.beginPath();
+      ctx.moveTo(26, -9);
+      ctx.lineTo(150, -34);
+      ctx.lineTo(150, 34);
+      ctx.lineTo(26, 9);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
     // Shadow.
     ctx.fillStyle = 'rgba(0,0,0,0.30)';
     ctx.beginPath();
@@ -50,8 +64,10 @@ export function createRenderer(canvas) {
     // Headlights.
     ctx.fillStyle = '#fff8c8';
     ctx.fillRect(24, -10, 3, 5); ctx.fillRect(24, 5, 3, 5);
-    ctx.fillStyle = '#ff5a4a';
-    ctx.fillRect(-27, -10, 3, 5); ctx.fillRect(-27, 5, 3, 5);
+    // Tail lights flare when braking.
+    ctx.fillStyle = car.braking ? '#ff2a1a' : '#ff5a4a';
+    const tw = car.braking ? 5 : 3;
+    ctx.fillRect(-27, -10, tw, 5); ctx.fillRect(-27, 5, tw, 5);
     if (car.kind === 'police') {
       ctx.fillStyle = '#2a4a8a';
       ctx.fillRect(-16, -13, 32, 6);
@@ -131,6 +147,52 @@ export function createRenderer(canvas) {
     ctx.fillStyle = '#6a5238';
     ctx.fillRect(110, 700, 130, 16);
     ctx.fillRect(110, 2100, 130, 16);
+    // Living harbour: fishing boats bobbing, a ferry on its route, and
+    // the Teluk Senja lighthouse sweeping its beam over the water.
+    const bob = (i) => Math.sin(time * 0.7 + i * 1.7) * 6;
+    for (let i = 0; i < 4; i++) {
+      const bx = 34 + i * 18; const by = 380 + i * 620 + bob(i);
+      ctx.fillStyle = '#5a3a22';
+      ctx.beginPath(); ctx.moveTo(bx - 20, by); ctx.lineTo(bx + 20, by); ctx.lineTo(bx + 14, by + 12); ctx.lineTo(bx - 14, by + 12); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#e8e0d0';
+      ctx.fillRect(bx - 6, by - 12, 12, 12);
+      ctx.strokeStyle = '#3a2a18';
+      ctx.beginPath(); ctx.moveTo(bx, by - 12); ctx.lineTo(bx, by - 30); ctx.stroke();
+    }
+    const ferryY = 120 + ((time * 24) % 2760);
+    ctx.fillStyle = '#2a4a6a';
+    ctx.beginPath(); ctx.moveTo(18, ferryY); ctx.lineTo(92, ferryY); ctx.lineTo(82, ferryY + 22); ctx.lineTo(28, ferryY + 22); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffe9a8';
+    for (let wnd = 0; wnd < 4; wnd++) ctx.fillRect(28 + wnd * 15, ferryY + 5, 8, 8);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 11px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('FERI SENJA', 55, ferryY - 8);
+    // Lighthouse.
+    ctx.fillStyle = '#e8e0d0';
+    ctx.fillRect(48, 1440, 26, 110);
+    ctx.fillStyle = '#c94a3a';
+    ctx.fillRect(48, 1470, 26, 20);
+    ctx.fillRect(48, 1510, 26, 20);
+    ctx.fillStyle = '#2a2a34';
+    ctx.fillRect(44, 1428, 34, 16);
+    ctx.fillStyle = '#ffe9a8';
+    ctx.beginPath(); ctx.arc(61, 1436, 7, 0, Math.PI * 2); ctx.fill();
+    const beamA = time * 0.55;
+    ctx.save();
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = '#fff6c8';
+    ctx.beginPath();
+    ctx.moveTo(61, 1436);
+    ctx.lineTo(61 + Math.cos(beamA) * 330, 1436 + Math.sin(beamA) * 330 - 60);
+    ctx.lineTo(61 + Math.cos(beamA) * 330, 1436 + Math.sin(beamA) * 330 + 60);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 12px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('MERCUSUAR', 61, 1570);
     // District names painted on the ground.
     ctx.textAlign = 'center';
     ctx.font = 'bold 64px system-ui, sans-serif';
@@ -183,16 +245,17 @@ export function createRenderer(canvas) {
     ctx.font = 'bold 30px system-ui, sans-serif';
     ctx.fillText('🔧', GARAGE.x + GARAGE.w / 2, GARAGE.y + 72);
 
-    // Market stalls.
+    // Market stalls: open by day, shuttered after 19:00.
+    const nightNow = state.clockMin >= 1140;
     for (const s of state.city.stalls) {
       ctx.fillStyle = 'rgba(0,0,0,0.25)';
       ctx.fillRect(s.x + 3, s.y + 4, s.w, s.h);
-      ctx.fillStyle = s.color;
+      ctx.fillStyle = nightNow ? '#5a5348' : s.color;
       ctx.fillRect(s.x, s.y, s.w, s.h);
       ctx.fillStyle = 'rgba(255,255,255,0.9)';
       ctx.font = 'bold 11px system-ui, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(s.label, s.x + s.w / 2, s.y + 19);
+      ctx.fillText(nightNow ? 'TUTUP' : s.label, s.x + s.w / 2, s.y + 19);
     }
     // Props.
     for (const pr of state.city.props) {
@@ -208,6 +271,14 @@ export function createRenderer(canvas) {
       } else if (pr.kind === 'lamp') {
         ctx.fillStyle = '#3a3a44';
         ctx.fillRect(pr.x - 2, pr.y - 14, 4, 16);
+        const nightF = Math.max(0, Math.min(1, (state.clockMin - 1110) / 45));
+        if (nightF > 0) {
+          ctx.save();
+          ctx.globalAlpha = 0.35 * nightF;
+          ctx.fillStyle = '#ffe9a8';
+          ctx.beginPath(); ctx.arc(pr.x, pr.y - 16, 20, 0, Math.PI * 2); ctx.fill();
+          ctx.restore();
+        }
         ctx.fillStyle = '#ffe9a8';
         ctx.beginPath(); ctx.arc(pr.x, pr.y - 16, 5, 0, Math.PI * 2); ctx.fill();
       } else if (pr.kind === 'container') {
@@ -289,11 +360,12 @@ export function createRenderer(canvas) {
       ctx.stroke();
     }
 
-    // Cars: parked, traffic, police, roadblock cars.
-    for (const car of state.parked) drawCarShape(car, false, time);
-    for (const car of state.traffic) drawCarShape(car, false, time);
+    // Cars: parked, traffic, police, roadblock cars. nightF drives headlights.
+    const nightF = Math.max(0, Math.min(1, (state.clockMin - 1110) / 45));
+    for (const car of state.parked) drawCarShape(car, false, time, nightF);
+    for (const car of state.traffic) drawCarShape(car, false, time, nightF);
     if (state.roadblock) {
-      for (const car of state.roadblock.cars) drawCarShape(car, false, time);
+      for (const car of state.roadblock.cars) drawCarShape(car, false, time, nightF);
       // Cones around the roadblock.
       ctx.fillStyle = '#ff7a1a';
       const rb = state.roadblock;
@@ -304,8 +376,32 @@ export function createRenderer(canvas) {
         ctx.beginPath(); ctx.moveTo(cx, cy - 9); ctx.lineTo(cx - 7, cy + 6); ctx.lineTo(cx + 7, cy + 6); ctx.closePath(); ctx.fill();
       }
     }
-    for (const car of state.police) drawCarShape(car, false, time);
-    if (state.player.car) drawCarShape(state.player.car, true, time);
+    for (const car of state.police) drawCarShape(car, false, time, nightF);
+    if (state.player.car) drawCarShape(state.player.car, true, time, nightF);
+
+    // Crew at home in the garage yard, and the companion walking with Raka.
+    function drawCrewMember(x, y, shirt, label, ringColor) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.strokeStyle = ringColor;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath(); ctx.ellipse(2, 6, 9, 5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = shirt;
+      ctx.beginPath(); ctx.roundRect(-7, -5, 14, 14, 4); ctx.fill();
+      ctx.fillStyle = '#e8b98a';
+      ctx.beginPath(); ctx.arc(0, -9, 6.5, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 12px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(label, x, y - 24);
+    }
+    for (const npc of state.crewNpcs || []) drawCrewMember(npc.x, npc.y, npc.color, npc.name, npc.color);
+    if (state.companion?.active) {
+      drawCrewMember(state.companion.x, state.companion.y, state.companion.color, state.companion.name, '#ffd23e');
+    }
 
     // Pedestrians and the player on foot.
     for (const ped of state.peds) {
@@ -358,9 +454,9 @@ export function createRenderer(canvas) {
       ctx.stroke();
     }
     for (const s of state.sparks) {
-      ctx.globalAlpha = Math.max(0, s.life * 4);
+      ctx.globalAlpha = Math.max(0, Math.min(1, s.life * 2));
       ctx.fillStyle = s.color;
-      ctx.beginPath(); ctx.arc(s.x, s.y, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.size || 4, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 1;
     }
 
@@ -386,16 +482,18 @@ export function createRenderer(canvas) {
       ctx.save();
       ctx.translate(h.x, h.y);
       ctx.rotate(h.angle * 0.15);
-      ctx.fillStyle = '#2a3a4a';
-      ctx.beginPath(); ctx.roundRect(-38, -14, 76, 28, 12); ctx.fill();
+      ctx.fillStyle = '#3d6a8a';
+      ctx.beginPath(); ctx.roundRect(-48, -17, 96, 34, 14); ctx.fill();
+      ctx.fillStyle = '#eef6ff';
+      ctx.fillRect(-48, -6, 96, 8);
       ctx.fillStyle = '#7ac2ff';
-      ctx.beginPath(); ctx.roundRect(14, -10, 18, 20, 6); ctx.fill();
+      ctx.beginPath(); ctx.roundRect(18, -12, 22, 24, 7); ctx.fill();
       ctx.fillStyle = '#e8e8e8';
-      ctx.fillRect(-70, -4, 34, 7);
+      ctx.fillRect(-88, -5, 42, 8);
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 13px system-ui, sans-serif';
+      ctx.font = 'bold 15px system-ui, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('PTS', -4, 5);
+      ctx.fillText('PTS', -6, 6);
       // Rotor, spinning.
       ctx.strokeStyle = 'rgba(20,20,26,0.85)';
       ctx.lineWidth = 4;
@@ -416,12 +514,19 @@ export function createRenderer(canvas) {
     }
 
     // Dusk light: warm wash + vignette, kept light so the HUD stays crisp.
+    // After 18:30 the city slides into night: darker wash, lit windows
+    // already drawn brighter by the overlay below.
+    const nightF2 = Math.max(0, Math.min(1, (state.clockMin - 1110) / 45));
     const grad = ctx.createLinearGradient(cam.x, cam.y, cam.x, cam.y + cam.h);
     grad.addColorStop(0, 'rgba(255, 150, 60, 0.10)');
     grad.addColorStop(0.55, 'rgba(255, 110, 90, 0.05)');
     grad.addColorStop(1, 'rgba(60, 30, 90, 0.14)');
     ctx.fillStyle = grad;
     ctx.fillRect(cam.x, cam.y, cam.w, cam.h);
+    if (nightF2 > 0) {
+      ctx.fillStyle = `rgba(16, 20, 52, ${0.30 * nightF2})`;
+      ctx.fillRect(cam.x, cam.y, cam.w, cam.h);
+    }
   }
 
   function drawTitle(state, saved) {
@@ -455,6 +560,25 @@ export function createRenderer(canvas) {
     ctx.font = 'bold 26px system-ui, sans-serif';
     ctx.fillStyle = '#ffe9c8';
     ctx.fillText('Kejahatan, kejar-kejaran, dan delapan misi di kota senja.', vw / 2, vh * 0.36 + 46);
+    // Crew briefing portraits, drawn in code: Sinta and Bang Dodi.
+    const portraits = [
+      { initial: 'S', color: '#ff9ad5', name: 'SINTA', role: 'Sopir kabur · Q pengalih PTS', dx: -150 },
+      { initial: 'D', color: '#7ac2ff', name: 'BANG DODI', role: 'Pagar & bengkel · F perbaikan', dx: 150 },
+    ];
+    for (const prt of portraits) {
+      const cx = vw / 2 + prt.dx; const cy = vh * 0.36 + 96;
+      ctx.fillStyle = prt.color;
+      ctx.beginPath(); ctx.arc(cx, cy, 30, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#241a30';
+      ctx.font = 'bold 30px system-ui, sans-serif';
+      ctx.fillText(prt.initial, cx, cy + 11);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 19px system-ui, sans-serif';
+      ctx.fillText(prt.name, cx, cy + 56);
+      ctx.font = '15px system-ui, sans-serif';
+      ctx.fillStyle = '#ffe9c8';
+      ctx.fillText(prt.role, cx, cy + 78);
+    }
     ctx.font = '20px system-ui, sans-serif';
     ctx.fillStyle = '#ffffff';
     const lines = [
@@ -501,8 +625,10 @@ export function createRenderer(canvas) {
       return;
     }
     const cam = state.camera;
+    const shakeX = state.shake > 0 ? Math.sin(state.time * 47) * state.shake * 7 : 0;
+    const shakeY = state.shake > 0 ? Math.cos(state.time * 39) * state.shake * 7 : 0;
     ctx.save();
-    ctx.translate(-cam.x, -cam.y);
+    ctx.translate(-cam.x + shakeX, -cam.y + shakeY);
     drawWorld(state);
     ctx.restore();
     // HUD in screen space.

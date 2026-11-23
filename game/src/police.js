@@ -51,11 +51,23 @@ export function updatePolice(state, dt) {
   while (police.length > wantCount) police.pop();
 
   // Chase: steer at the player, nudge out of buildings, bump the player.
-  for (const car of police) {
+  // Patrol cars also repel each other so they fan out instead of piling up.
+  for (let i = 0; i < police.length; i++) {
+    const car = police[i];
+    for (let j = 0; j < police.length; j++) {
+      if (i === j) continue;
+      const other = police[j];
+      const d = dist(car.x, car.y, other.x, other.y);
+      if (d > 0 && d < 62) {
+        const push = (62 - d) * 0.5;
+        car.x += ((car.x - other.x) / d) * push;
+        car.y += ((car.y - other.y) / d) * push;
+      }
+    }
     steerCarToward(car, player.x, player.y, dt, 0.92);
     const res = collideCircle(city, state.obstacles, car.x, car.y, 24);
     if (res.hit) { car.x = res.x; car.y = res.y; car.speed *= 0.55; if (Math.abs(car.speed) > 260) playCrash(); }
-    if (dist(car.x, car.y, player.x, player.y) < 46) {
+    if (dist(car.x, car.y, player.x, player.y) < 46 && Math.abs(car.speed) > 200) {
       // A hard bump shoves the player's car and rattles health a little.
       if (player.car) {
         player.car.speed *= 0.6;
@@ -75,8 +87,8 @@ export function updatePolice(state, dt) {
     const h = state.helicopter;
     h.rotor += dt * 30;
     const tx = player.x - 40; const ty = player.y - 120;
-    h.x += (tx - h.x) * Math.min(1, dt * 1.2);
-    h.y += (ty - h.y) * Math.min(1, dt * 1.2);
+    h.x += (tx - h.x) * Math.min(1, dt * 2.8);
+    h.y += (ty - h.y) * Math.min(1, dt * 2.8);
     h.lightX += (player.x - h.lightX) * Math.min(1, dt * 4);
     h.lightY += (player.y - h.lightY) * Math.min(1, dt * 4);
     h.angle = Math.atan2(player.y - h.y, player.x - h.x);

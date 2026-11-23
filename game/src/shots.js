@@ -48,21 +48,21 @@ function stageCover(state) {
   addWanted(state, 4, 'Kabur dari PTS!');
   state.message = 'Kabur dari PTS — capai titik aman di timur, dengan bintang 0.';
   state.messageTimer = 30;
-  runSteps(state, 150, ['w'], { x: 1050, y: 300 });
+  runSteps(state, 110, ['w'], { x: 1050, y: 300 });
   return state;
 }
 
 function stageOnFoot(state) {
-  // Mission 4 (warehouse shootout): Raka on foot among the guards at
-  // the Pelabuhan Senja warehouse, pistol out, market crowds nearby.
+  // Mission 4 (warehouse shootout): Raka on foot at the Pelabuhan
+  // crossroads with the guards in the open, Bang Dodi walking with him.
   startMission(state, 3);
-  state.player.x = 700; state.player.y = 1330;
+  state.player.x = 900; state.player.y = 1440;
   state.player.onFoot = true;
   state.player.weaponIndex = 0;
   state.message = 'Kalahkan penjaga gudang, lalu ambil dokumen muatannya.';
   state.messageTimer = 30;
-  // Aim down-left at the nearest guard and fire in bursts; Raka stands his ground.
-  runSteps(state, 90, [], { x: 580, y: 430, down: true });
+  // Aim up at the guards and fire in bursts; Raka stands his ground.
+  runSteps(state, 90, [], { x: 640, y: 290, down: true });
   return state;
 }
 
@@ -84,6 +84,7 @@ function stageRoadblock(state) {
   // the helicopter overhead with its searchlight on him, a car ahead
   // waiting to be stolen, patrol cars closing in.
   startMission(state, 1);
+  state.clockMin = 19 * 60 + 5; // night: headlights, streetlights, shut stalls
   state.player.x = 1500; state.player.y = 1800;
   givePlayerCar(state, 'camar', 1500, 1800, 0);
   addWanted(state, 3, 'ROADBLOCK PTS DI DEPAN!');
