@@ -148,10 +148,12 @@ export class Geo {
     const topColor = opt.top || shade(color, 1.18);
     const sideColor = opt.sides || color;
     // Window repeats are per face, from that face's real size, so the
-    // grid stays square on every side of a building.
-    const uvU = opt.tex ? (sx * SCALE) / 26 : 1;
-    const uvX = opt.tex ? (sz * SCALE) / 26 : 1;
-    const uvV = opt.tex ? (sy * SCALE) / 26 : 1;
+    // grid stays square on every side of a building. One texture tile
+    // spans 130 world units, so a window reads about 32 world units
+    // wide — building scale, not a dot grid.
+    const uvU = opt.tex ? (sx * SCALE) / 130 : 1;
+    const uvX = opt.tex ? (sz * SCALE) / 130 : 1;
+    const uvV = opt.tex ? (sy * SCALE) / 130 : 1;
     const tex = opt.tex ? 1 : 0;
     const emis = opt.emis || 0; const alpha = opt.alpha ?? 1;
     const uvZ = [[0, 0], [uvU, 0], [uvU, uvV], [0, uvV]];
@@ -244,20 +246,27 @@ function makeFacadeTexture(gl) {
   const cv = document.createElement('canvas');
   cv.width = 256; cv.height = 256;
   const ctx = cv.getContext('2d');
-  ctx.fillStyle = '#cfc8bb';
+  ctx.fillStyle = '#c9c0ae';
   ctx.fillRect(0, 0, 256, 256);
-  // Deterministic window grid: 6 columns x 8 rows, some lit.
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 6; c++) {
-      const lit = ((c * 7 + r * 3) % 3) === 0;
+  // Large windows: 4 columns x 5 rows per tile. One tile spans a wide
+  // facade (see Geo.box UV repeats), so windows read at building scale
+  // instead of dissolving into a dot grid.
+  for (let r = 0; r < 5; r++) {
+    for (let c = 0; c < 4; c++) {
+      const lit = (c === 1 && r === 1) || (c === 2 && r === 3);
+      ctx.fillStyle = '#8d867a';
+      ctx.fillRect(6 + c * 62, 4 + r * 48, 48, 38);
       ctx.fillStyle = lit ? '#ffe9a8' : '#2b313c';
-      ctx.fillRect(10 + c * 42, 8 + r * 31, 24, 19);
+      ctx.fillRect(10 + c * 62, 8 + r * 48, 40, 30);
+      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      ctx.fillRect(10 + c * 62, 8 + r * 48, 40, 4);
     }
-    ctx.fillStyle = 'rgba(0,0,0,0.18)';
-    ctx.fillRect(0, r * 32, 256, 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.16)';
+    ctx.fillRect(0, r * 48 + 46, 256, 2);
   }
-  ctx.fillStyle = 'rgba(0,0,0,0.25)';
-  ctx.fillRect(0, 224, 256, 32);
+  // Darker ground-floor band.
+  ctx.fillStyle = 'rgba(0,0,0,0.28)';
+  ctx.fillRect(0, 232, 256, 24);
   const tex = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, cv);
@@ -326,12 +335,16 @@ function buildStatic(city) {
     const w3 = b.w / SCALE; const d3 = b.h / SCALE;
     const h3 = 2 + b.height * 3.0;
     const base = hexRgb(b.color);
+    // Vary facade brightness per building so neighbouring blocks do
+    // not read as one flat, identical wall.
+    const tint = 0.86 + hash2(b.x | 0, b.y | 0) * 0.26;
+    const tinted = [base[0] * tint, base[1] * tint, base[2] * tint];
     const cx = wx(b.x + b.w / 2); const cz = wz(b.y + b.h / 2);
-    geo.box(cx, h3 / 2, cz, w3, h3, d3, 0, base, {
-      tex: true, uvU: Math.max(1, Math.round(b.w / 26)), uvV: Math.max(1, Math.round((h3 * SCALE) / 26)),
+    geo.box(cx, h3 / 2, cz, w3, h3, d3, 0, tinted, {
+      tex: true, uvU: Math.max(1, Math.round(b.w / 130)), uvV: Math.max(1, Math.round((h3 * SCALE) / 130)),
     });
     // Roof parapet: a thin lighter slab on top.
-    geo.box(cx, h3 + 0.12, cz, w3 * 0.96, 0.24, d3 * 0.96, 0, shade(base, 1.25), {});
+    geo.box(cx, h3 + 0.12, cz, w3 * 0.96, 0.24, d3 * 0.96, 0, shade(tinted, 1.25), {});
   }
   // Props.
   for (const pr of city.props) {
@@ -388,9 +401,9 @@ function cameraTarget(state) {
   const heading = driving ? p.car.angle : p.angle;
   return {
     heading,
-    dist: driving ? 17 : 13,
-    height: driving ? 8.4 : 6.6,
-    ahead: driving ? 6.5 : 4,
+    dist: driving ? 12.5 : 9.5,
+    height: driving ? 5.4 : 4.2,
+    ahead: driving ? 5 : 3.5,
   };
 }
 
@@ -426,7 +439,7 @@ function instantCam(state, aspect) {
   const fx = Math.cos(t.heading); const fz = Math.sin(t.heading);
   const px = wx(p.x); const pz = wz(p.y);
   const eye = [px - fx * t.dist, t.height, pz - fz * t.dist];
-  const center = [px + fx * t.ahead, 1.3, pz + fz * t.ahead];
+  const center = [px + fx * t.ahead, 1.6, pz + fz * t.ahead];
   const view = matLookAt(eye, center, [0, 1, 0]);
   const proj = matPerspective((55 * Math.PI) / 180, aspect, 0.5, 500);
   return { eye, center, view, proj, vp: matMul(proj, view), yaw: t.heading };
@@ -595,24 +608,29 @@ function drawCharacter(geo, trans, x, y, angle, shirt, skin, opt = {}) {
 
 function drawHelicopter(geo, trans, h, time, camRight) {
   const cx = wx(h.x); const cz = wz(h.y);
-  const alt = 13;
+  // Alt 10.5 with the hover ahead/side keeps the searchlight cone
+  // clearly visible; lower altitudes hid the body behind the HUD
+  // banner anyway and washed the frame out with the cone.
+  const alt = 10.5;
+  const k = 1.35; // body scale
   const body = [0.22, 0.40, 0.52];
-  geo.box(cx, alt, cz, 2.4, 0.85, 1.0, h.angle * 0.15, body, {});
-  geo.box(cx - Math.cos(h.angle * 0.15) * 1.9, alt + 0.1, cz - Math.sin(h.angle * 0.15) * 1.9, 1.5, 0.3, 0.3, h.angle * 0.15, body, {});
-  geo.box(cx + Math.cos(h.angle * 0.15) * 0.7, alt + 0.1, cz + Math.sin(h.angle * 0.15) * 0.7, 0.5, 0.5, 0.7, h.angle * 0.15, [0.55, 0.75, 0.88], {});
+  geo.box(cx, alt, cz, 2.4 * k, 0.85 * k, 1.0 * k, h.angle * 0.15, body, {});
+  geo.box(cx - Math.cos(h.angle * 0.15) * 1.9 * k, alt + 0.1, cz - Math.sin(h.angle * 0.15) * 1.9 * k, 1.5 * k, 0.3 * k, 0.3 * k, h.angle * 0.15, body, {});
+  geo.box(cx + Math.cos(h.angle * 0.15) * 0.7 * k, alt + 0.1, cz + Math.sin(h.angle * 0.15) * 0.7 * k, 0.5 * k, 0.5 * k, 0.7 * k, h.angle * 0.15, [0.55, 0.75, 0.88], {});
   // Rotor, spinning.
   const ra = h.rotor;
-  geo.box(cx, alt + 0.62, cz, 3.4, 0.07, 0.14, ra, [0.1, 0.1, 0.12], {});
-  geo.box(cx, alt + 0.62, cz, 0.14, 0.07, 3.4, ra, [0.1, 0.1, 0.12], {});
+  geo.box(cx, alt + 0.62 * k, cz, 3.4 * k, 0.07, 0.14, ra, [0.1, 0.1, 0.12], {});
+  geo.box(cx, alt + 0.62 * k, cz, 0.14, 0.07, 3.4 * k, ra, [0.1, 0.1, 0.12], {});
   // Skids.
-  geo.box(cx - 0.3, alt - 0.62, cz, 1.6, 0.08, 0.08, h.angle * 0.15, [0.15, 0.15, 0.17], {});
-  geo.box(cx + 0.3, alt - 0.62, cz, 1.6, 0.08, 0.08, h.angle * 0.15, [0.15, 0.15, 0.17], {});
-  // Searchlight cone + ground pool.
+  geo.box(cx - 0.3 * k, alt - 0.62 * k, cz, 1.6 * k, 0.08, 0.08, h.angle * 0.15, [0.15, 0.15, 0.17], {});
+  geo.box(cx + 0.3 * k, alt - 0.62 * k, cz, 1.6 * k, 0.08, 0.08, h.angle * 0.15, [0.15, 0.15, 0.17], {});
+  // Searchlight cone + ground pool: wider and brighter so the beam
+  // reads against the street, not just as a faint slant.
   const lx = wx(h.lightX); const lz = wz(h.lightY);
-  trans.cone([cx, alt - 0.3, cz], [lx, 0.1, lz], 1.5, [1, 0.96, 0.78], 0.22, 10);
+  trans.cone([cx, alt - 0.3, cz], [lx, 0.1, lz], 2.4, [1, 0.96, 0.78], 0.34, 10);
   trans.quad(
-    [lx - 1.4, 0.08, lz - 0.8], [lx + 1.4, 0.08, lz - 0.8], [lx + 1.4, 0.08, lz + 0.8], [lx - 1.4, 0.08, lz + 0.8],
-    [0, 1, 0], [1, 0.96, 0.78], [[0, 0], [1, 0], [1, 1], [0, 1]], 0, 0, 0.35);
+    [lx - 1.9, 0.08, lz - 1.1], [lx + 1.9, 0.08, lz - 1.1], [lx + 1.9, 0.08, lz + 1.1], [lx - 1.9, 0.08, lz + 1.1],
+    [0, 1, 0], [1, 0.96, 0.78], [[0, 0], [1, 0], [1, 1], [0, 1]], 0, 0, 0.45);
   // Shadow blob on the ground.
   trans.quad(
     [lx - 1.2, 0.06, lz - 0.5], [lx + 1.2, 0.06, lz - 0.5], [lx + 1.2, 0.06, lz + 0.5], [lx - 1.2, 0.06, lz + 0.5],
